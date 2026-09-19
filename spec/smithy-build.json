@@ -1,0 +1,35 @@
+{
+  "version": "1.0",
+  "sources": ["model"],
+  "maven": {
+    "dependencies": [
+      "software.amazon.smithy:smithy-model:1.71.0",
+      "software.amazon.smithy:smithy-aws-traits:1.71.0",
+      "software.amazon.smithy:smithy-validation-model:1.71.0",
+      "software.amazon.smithy:smithy-openapi:1.71.0",
+      "software.amazon.smithy.typescript:smithy-typescript-codegen:0.53.0",
+      "software.amazon.smithy.typescript:smithy-aws-typescript-codegen:0.53.0"
+    ]
+  },
+  "plugins": {
+    "typescript-server-codegen": {
+      "service": "assistant.api#SupportAssistant",
+      "package": "@app/api-server-sdk",
+      "packageVersion": "0.1.0",
+      "packageJson": {
+        "private": true,
+        "license": "UNLICENSED"
+      }
+    },
+    "openapi": {
+      "service": "assistant.api#SupportAssistant",
+      "protocol": "aws.protocols#restJson1",
+      "version": "3.1.0",
+      "tags": true,
+      "useIntegerType": true,
+      "jsonAdd": {
+        "/info/description": "Generated from the Smithy model in spec/model. Do not edit by hand."
+      }
+    }
+  }
+}

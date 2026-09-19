@@ -1,0 +1,73 @@
+{
+  "name": "api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/server.ts",
+    "dev:worker": "tsx watch --clear-screen=false src/worker.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "start:worker": "node dist/worker.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:seed": "tsx src/db/seed.ts",
+    "eval:retrieval": "tsx eval/retrieval-eval.ts",
+    "eval:corrections": "tsx eval/corrections-eval.ts"
+  },
+  "dependencies": {
+    "@app/api-server-sdk": "workspace:*",
+    "@app/openapi": "workspace:*",
+    "@fastify/swagger": "^9.5.1",
+    "@fastify/swagger-ui": "^5.2.3",
+    "@google/genai": "^1.12.0",
+    "@langfuse/client": "^5.11.1",
+    "@langfuse/otel": "^5.11.1",
+    "@langfuse/tracing": "^5.11.1",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/sdk-trace-node": "^2.11.0",
+    "@smithy/core": "^3.34.1",
+    "@smithy/server-common": "0.4.2",
+    "argon2": "^0.43.1",
+    "drizzle-orm": "^0.44.4",
+    "fastify": "^5.4.0",
+    "jose": "^6.0.12",
+    "mammoth": "^1.10.0",
+    "pdf-parse": "^1.1.1",
+    "pg": "^8.16.3",
+    "pg-boss": "^10.3.2",
+    "pino": "^9.7.0",
+    "zod": "^4.0.14"
+  },
+  "devDependencies": {
+    "@app/eslint-config": "workspace:*",
+    "@app/tsconfig": "workspace:*",
+    "@electric-sql/pglite": "^0.3.16",
+    "@types/node": "^24.2.0",
+    "@types/pdf-parse": "^1.1.5",
+    "@types/pg": "^8.15.5",
+    "drizzle-kit": "^0.31.4",
+    "eslint": "^9.32.0",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "pino-pretty": "^13.0.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs}": [
+      "eslint --fix --max-warnings 0 --no-warn-ignored",
+      "prettier --write"
+    ]
+  },
+  "files": [
+    "dist",
+    "prompts",
+    "seed",
+    "drizzle"
+  ]
+}

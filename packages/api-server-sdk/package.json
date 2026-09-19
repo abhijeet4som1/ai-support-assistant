@@ -1,0 +1,36 @@
+{
+  "name": "@app/api-server-sdk",
+  "description": "@app/api-server-sdk server",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "tsc -p tsconfig.cjs.json && tsc -p tsconfig.es.json && tsc -p tsconfig.types.json",
+    "clean": "rm -rf dist-cjs dist-es dist-types tsconfig.*.tsbuildinfo"
+  },
+  "main": "./dist-cjs/index.js",
+  "types": "./dist-types/index.d.ts",
+  "module": "./dist-es/index.js",
+  "sideEffects": false,
+  "dependencies": {
+    "tslib": "^2.6.2",
+    "@aws-sdk/core": "^3.977.9",
+    "@smithy/core": "^3.33.3",
+    "@smithy/fetch-http-handler": "^5.7.2",
+    "@smithy/node-http-handler": "^4.11.3",
+    "@smithy/server-common": "0.4.2",
+    "@smithy/types": "^4.17.2"
+  },
+  "devDependencies": {
+    "@tsconfig/node20": "20.1.8",
+    "@types/node": "^24.2.0",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "files": [
+    "dist-*/**",
+    "src/**"
+  ],
+  "private": true,
+  "license": "UNLICENSED"
+}

@@ -1,0 +1,46 @@
+{
+  "name": "ai-support-assistant",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI assistant for customer-support teams: spec-first (Smithy) API, RAG over company guidelines, React UI.",
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build",
+    "up": "docker compose up --build -d",
+    "down": "docker compose down",
+    "reset": "docker compose down -v",
+    "codegen": "docker compose --profile tools run --rm codegen && pnpm --filter web api:types",
+    "lint": "pnpm -r --parallel run lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm build:generated && pnpm -r --parallel run typecheck",
+    "test": "pnpm -r run test",
+    "build": "pnpm -r run build",
+    "prepare": "husky",
+    "build:generated": "pnpm --filter \"./packages/api-server-sdk\" run build",
+    "spec:validate": "cd spec && smithy validate model"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.6.14"
+  },
+  "lint-staged": {
+    "*.{json,md,yml,yaml,css,html,smithy}": [
+      "prettier --write --ignore-unknown"
+    ]
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@google/genai",
+      "argon2",
+      "esbuild",
+      "protobufjs",
+      "unrs-resolver"
+    ]
+  }
+}
