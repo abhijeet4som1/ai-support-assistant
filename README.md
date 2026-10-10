@@ -334,6 +334,9 @@ No test needs Docker, a database or a Gemini key.
 
 ## Troubleshooting
 
+- **Retrieval got worse after changing `GEMINI_EMBEDDING_MODEL`** – stored vectors still come
+  from the old model and do not compare with the new query vectors. Re-embed them once:
+  `docker compose exec api node dist/db/reembed.js` (or `pnpm --filter api db:reembed` locally).
 - **`GEMINI_API_KEY` / `JWT_SECRET` errors at `docker compose up`** – the compose file refuses
   to start without them; edit `.env`.
 - **`assistant.localhost` does not resolve** – use `http://localhost`, or add a hosts entry.

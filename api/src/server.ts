@@ -34,6 +34,7 @@ const embedder = createGeminiEmbedder({
 const chatModel = createGeminiChatModel({
   apiKey: config.GEMINI_API_KEY,
   model: config.GEMINI_CHAT_MODEL,
+  thinkingLevel: config.GEMINI_THINKING_LEVEL,
   timeoutMs: config.GEMINI_TIMEOUT_MS,
   log,
 });

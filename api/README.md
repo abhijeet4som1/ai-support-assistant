@@ -54,14 +54,14 @@ test/                integration tests on PGlite through the real generated SDK
 See `.env.example` at the repo root; `src/config.ts` is the single place that reads
 `process.env` and fails fast with a list of every problem. Notable settings:
 
-| Variable                                                           | Meaning                                                                                                                                                                               |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                                                     | Postgres connection (pgvector extension is created by migrations)                                                                                                                     |
-| `JWT_SECRET`, `ACCESS_TOKEN_TTL_MINUTES`, `REFRESH_TOKEN_TTL_DAYS` | access-token signing and lifetimes; refresh tokens are opaque, hashed, rotated on use                                                                                                 |
-| `SEED_USERS`                                                       | `user:password,...` created on first start                                                                                                                                            |
-| `GEMINI_*`                                                         | API key, chat model, embedding model + dimensions (dimensions must equal the `vector(768)` column; api and worker refuse to start otherwise), `GEMINI_TIMEOUT_MS` per-request timeout |
-| `RAG_*`, `CHAT_HISTORY_WINDOW`                                     | retrieval sizes / thresholds, conversation window                                                                                                                                     |
-| `MAX_UPLOAD_MB`                                                    | upload limit (also the Fastify body limit)                                                                                                                                            |
+| Variable                                                           | Meaning                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                     | Postgres connection (pgvector extension is created by migrations)                                                                                                                                                                              |
+| `JWT_SECRET`, `ACCESS_TOKEN_TTL_MINUTES`, `REFRESH_TOKEN_TTL_DAYS` | access-token signing and lifetimes; refresh tokens are opaque, hashed, rotated on use                                                                                                                                                          |
+| `SEED_USERS`                                                       | `user:password,...` created on first start                                                                                                                                                                                                     |
+| `GEMINI_*`                                                         | API key, chat model + thinking level, embedding model + dimensions (dimensions must equal the `vector(768)` column; api and worker refuse to start otherwise; a model change needs `pnpm db:reembed`), `GEMINI_TIMEOUT_MS` per-request timeout |
+| `RAG_*`, `CHAT_HISTORY_WINDOW`                                     | retrieval sizes / thresholds, conversation window                                                                                                                                                                                              |
+| `MAX_UPLOAD_MB`                                                    | upload limit (also the Fastify body limit)                                                                                                                                                                                                     |
 
 ## Scripts
 
@@ -73,6 +73,7 @@ pnpm lint | pnpm typecheck | pnpm build
 pnpm db:generate  # drizzle-kit: create a migration from schema changes
 pnpm db:migrate   # apply migrations (also runs automatically at container start)
 pnpm db:seed      # seed users + sample companies (also runs at first start)
+pnpm db:reembed   # re-embed every stored vector after changing GEMINI_EMBEDDING_MODEL (same dimensions)
 ```
 
 ## Authentication

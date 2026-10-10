@@ -10,6 +10,7 @@ export interface Embedder {
   embedQuery(text: string): Promise<number[]>;
 }
 
+/** batchEmbedContents accepts up to 100 requests per call. */
 const BATCH = 100;
 
 export function createGeminiEmbedder(opts: {
@@ -36,7 +37,10 @@ export function createGeminiEmbedder(opts: {
         () =>
           ai.models.embedContent({
             model: opts.model,
-            contents: batch,
+            // One Content per text. Passing plain strings makes the SDK merge the batch into a
+            // single multi-part content, which gemini-embedding-2 embeds as ONE document (one
+            // vector for the whole batch); explicit contents give one vector per text.
+            contents: batch.map((text) => ({ role: 'user', parts: [{ text }] })),
             config: { taskType, outputDimensionality: opts.dimensions },
           }),
         opts.log,

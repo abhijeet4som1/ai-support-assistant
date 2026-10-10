@@ -62,9 +62,19 @@ export function WhyPanel({ message }: { message: Message }) {
               <Trans>{message.promptTokens} prompt tokens</Trans>
             </span>
           ) : null}
+          {message.thinkingTokens !== undefined ? (
+            <span>
+              <Trans>{message.thinkingTokens} thinking tokens</Trans>
+            </span>
+          ) : null}
           {message.completionTokens !== undefined ? (
             <span>
               <Trans>{message.completionTokens} output tokens</Trans>
+            </span>
+          ) : null}
+          {message.totalTokens !== undefined ? (
+            <span className="font-medium">
+              <Trans>{message.totalTokens} total tokens</Trans>
             </span>
           ) : null}
           {message.latencyMs !== undefined ? (

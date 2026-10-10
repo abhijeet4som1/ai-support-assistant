@@ -12,9 +12,11 @@ const base: Message = {
   role: 'assistant',
   content: '',
   status: 'ok',
-  model: 'gemini-3.6-flash',
+  model: 'gemini-3.8-flash',
   promptTokens: 1200,
+  thinkingTokens: 450,
   completionTokens: 300,
+  totalTokens: 1950,
   latencyMs: 2500,
   guidelineVersionId: 'abcdef12-3456',
   createdBy: { id: 'u', username: 'a', displayName: 'A' },
@@ -34,6 +36,9 @@ describe('WhyPanel', () => {
     expect(screen.getByText('82%')).toBeInTheDocument();
     expect(screen.getByText('corr-1')).toBeInTheDocument();
     expect(screen.getByText(/1200 prompt tokens/)).toBeInTheDocument();
+    expect(screen.getByText(/450 thinking tokens/)).toBeInTheDocument();
+    expect(screen.getByText(/300 output tokens/)).toBeInTheDocument();
+    expect(screen.getByText(/1950 total tokens/)).toBeInTheDocument();
     expect(screen.getByText('2.5 s')).toBeInTheDocument();
   });
 

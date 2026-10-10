@@ -1,4 +1,4 @@
-import { FinishReason, GoogleGenAI } from '@google/genai';
+import { FinishReason, GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { type Logger } from 'pino';
 
 import { guidanceResponseSchema } from './guidance.js';
@@ -8,7 +8,12 @@ import { errorStatus, providerErrorMessage } from '../lib/unknown.js';
 export interface GenerateResult {
   raw: string;
   promptTokens?: number;
+  /** Visible answer tokens; the provider reports reasoning tokens separately. */
   completionTokens?: number;
+  /** Reasoning ("thinking") tokens, billed as output. */
+  thinkingTokens?: number;
+  /** Provider-reported total for the call: prompt + thinking + answer. */
+  totalTokens?: number;
   /** Provider finish reason (STOP, MAX_TOKENS, SAFETY, ...) for diagnostics. */
   finishReason?: string;
 }
@@ -30,11 +35,25 @@ export class ChatModelError extends Error {
   }
 }
 
+export type ChatThinkingLevel = 'minimal' | 'low' | 'medium' | 'high';
+
+const THINKING_LEVELS: Record<ChatThinkingLevel, ThinkingLevel> = {
+  minimal: ThinkingLevel.MINIMAL,
+  low: ThinkingLevel.LOW,
+  medium: ThinkingLevel.MEDIUM,
+  high: ThinkingLevel.HIGH,
+};
+
 export function createGeminiChatModel(opts: {
   apiKey: string;
   /** Per-request timeout; a hung call rejects with a ChatModelError instead of holding the turn. */
   timeoutMs?: number;
   model: string;
+  /**
+   * How much the model reasons before answering. Thinking tokens are billed as output and count
+   * against maxOutputTokens. Omitted: the provider default for the model.
+   */
+  thinkingLevel?: ChatThinkingLevel;
   log: Logger;
 }): ChatModel {
   const ai = new GoogleGenAI({
@@ -56,6 +75,9 @@ export function createGeminiChatModel(opts: {
             // Thinking models spend part of this budget on reasoning before the JSON; 2048 was
             // truncating ~25% of answers mid-JSON (see docs/evaluation-report.md).
             maxOutputTokens: 8192,
+            ...(opts.thinkingLevel
+              ? { thinkingConfig: { thinkingLevel: THINKING_LEVELS[opts.thinkingLevel] } }
+              : {}),
           },
         });
         const finishReason = res.candidates?.[0]?.finishReason;
@@ -72,6 +94,8 @@ export function createGeminiChatModel(opts: {
           raw,
           promptTokens: res.usageMetadata?.promptTokenCount,
           completionTokens: res.usageMetadata?.candidatesTokenCount,
+          thinkingTokens: res.usageMetadata?.thoughtsTokenCount,
+          totalTokens: res.usageMetadata?.totalTokenCount,
           finishReason,
         };
       } catch (err) {
@@ -155,6 +179,8 @@ export function createFakeChatModel(): FakeChatModel {
         raw: JSON.stringify(guidance),
         promptTokens: 100,
         completionTokens: 50,
+        thinkingTokens: 20,
+        totalTokens: 170,
       });
     },
   };

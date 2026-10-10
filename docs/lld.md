@@ -1,3 +1,5 @@
+| `GEMINI_THINKING_LEVEL` | `medium` | §4; minimal, low, medium or high |
+
 # Low-level design
 
 This document describes how the AI Support Assistant works at the level of requests, database
@@ -38,7 +40,7 @@ start-up and validated in `api/src/config.ts` (§8).
 | API       | `api` image, `node dist/server.js` | Runs migrations, seeds users and companies, serves every `/api` operation through the Smithy server SDK, enqueues ingestion jobs |
 | Worker    | `api` image, `node dist/worker.js` | Consumes `ingest-guidelines` jobs: parse, chunk, embed, activate                                                                 |
 | DB        | `pgvector/pgvector:pg17`           | All application tables (§7), the pg-boss job tables, Drizzle's migration bookkeeping                                             |
-| Gemini    | external                           | `gemini-embedding-001` for embeddings, `gemini-3.6-flash` for answers and history summaries                                      |
+| Gemini    | external                           | `gemini-embedding-2` for embeddings, `gemini-3.8-flash` (medium thinking) for answers and history summaries                      |
 | Langfuse  | optional compose profile           | Receives one trace per chat turn and per ingestion, plus agent feedback as scores                                                |
 
 Every HTTP request follows the same path: nginx forwards it to Fastify, the adapter in
@@ -427,7 +429,8 @@ Step-by-step detail:
    retrieved context, is never dropped. The share of the model's 1,048,576-token window used is
    reported to the trace as `contextUsedPct`.
 8. **Generation.** JSON mode with a fixed response schema (`AssistantGuidance` from the Smithy
-   model), temperature 0.3, `maxOutputTokens` 8192. A `MAX_TOKENS` or `SAFETY` finish reason is
+   model), temperature 0.3, `maxOutputTokens` 8192, thinking level `GEMINI_THINKING_LEVEL` (medium;
+   thinking tokens count against the same budget). A `MAX_TOKENS` or `SAFETY` finish reason is
    turned into a specific `ChatModelError` rather than a truncated answer. Every Gemini call has a
    per-request timeout (`GEMINI_TIMEOUT_MS`, 60 s), so a hung provider fails the turn instead of
    holding the request open.
@@ -535,8 +538,9 @@ index, so a thread of any length costs one indexed range scan per page.
 
 The History detail page renders, per assistant message and straight from the stored row: the
 retrieved sections with similarity scores and the `via` tag, the corrections used with their
-scores, coverage, escalation, clarifications, agent decisions, notes, model, prompt and
-completion tokens, latency and the guideline version id. Nothing is recomputed, so the panel
+scores, coverage, escalation, clarifications, agent decisions, notes, model, prompt, thinking,
+output and total tokens (thinking tokens are the model's reasoning, billed as output; the total is
+the provider's figure for the whole call), latency and the guideline version id. Nothing is recomputed, so the panel
 shows what the model actually saw at the time even after the guidelines changed.
 
 ### 5.6 Feedback and corrections lifecycle
@@ -622,16 +626,16 @@ agent can see which path was taken.
 
 ### 6.2 Embeddings (`api/src/rag/embeddings.ts`)
 
-| Property      | Value                                                                                                                                                  |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Model         | `gemini-embedding-001` (`GEMINI_EMBEDDING_MODEL`)                                                                                                      |
-| Dimensions    | **768**, requested with `outputDimensionality` (the model is Matryoshka-trained, so truncation keeps the leading, most informative components)         |
-| Task type     | `RETRIEVAL_DOCUMENT` for chunks, `RETRIEVAL_QUERY` for customer messages and correction questions (asymmetric embeddings)                              |
-| Text embedded | `"<title>\n<content>"` for a chunk, the raw text for a query                                                                                           |
-| Normalisation | Every vector is scaled to unit length, so cosine similarity equals the dot product and `1 - (a <=> b)` in pgvector is the cosine similarity in [−1, 1] |
-| Batching      | The provider call takes up to 100 texts; the ingestion job asks for 50 chunks at a time and commits after each batch (resumable)                       |
-| Retries       | 4 attempts on HTTP 429/500/503, 1 s doubling; each call times out after `GEMINI_TIMEOUT_MS`                                                            |
-| Storage       | `vector(768)` column, HNSW index with `vector_cosine_ops`                                                                                              |
+| Property      | Value                                                                                                                                                   |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Model         | `gemini-embedding-2` (`GEMINI_EMBEDDING_MODEL`); switching models requires `pnpm db:reembed` so chunk and query vectors come from the same model        |
+| Dimensions    | **768**, requested with `outputDimensionality` (the model is Matryoshka-trained, so truncation keeps the leading, most informative components)          |
+| Task type     | `RETRIEVAL_DOCUMENT` for chunks, `RETRIEVAL_QUERY` for customer messages and correction questions (asymmetric embeddings)                               |
+| Text embedded | `"<title>\n<content>"` for a chunk, the raw text for a query                                                                                            |
+| Normalisation | Every vector is scaled to unit length, so cosine similarity equals the dot product and `1 - (a <=> b)` in pgvector is the cosine similarity in [−1, 1]  |
+| Batching      | Up to 100 texts per call, sent as one `Content` each (as strings the SDK merges them into one document); the ingestion job asks for 50 chunks at a time |
+| Retries       | 4 attempts on HTTP 429/500/503, 1 s doubling; each call times out after `GEMINI_TIMEOUT_MS`                                                             |
+| Storage       | `vector(768)` column, HNSW index with `vector_cosine_ops`                                                                                               |
 
 **Why 768.** The evaluation compared 768, 1536 and 3072 on the labelled set: 768 was best or tied
 on every ranking metric (top-1 82.5%, top-4 recall 100%) while costing a quarter of the storage
@@ -856,27 +860,27 @@ Indexes: unique `(message_id, user_id)`; `(company_id, active)`; HNSW on `query_
 Read from `.env` by Docker Compose; validated with Zod at start-up, all problems reported at
 once. `docs/evaluation-report.md` records how the tuned values were chosen.
 
-| Variable                                                          | Default                | Used by                                          |
-| ----------------------------------------------------------------- | ---------------------- | ------------------------------------------------ |
-| `GEMINI_API_KEY`                                                  | required               | embeddings, chat, summaries                      |
-| `JWT_SECRET`                                                      | required               | HS256 signing key                                |
-| `ACCESS_TOKEN_TTL_MINUTES`                                        | 15                     | §2                                               |
-| `REFRESH_TOKEN_TTL_DAYS`                                          | 7                      | §2                                               |
-| `SEED_USERS`                                                      | `agent1:…,agent2:…`    | start-up seeding                                 |
-| `GEMINI_CHAT_MODEL`                                               | `gemini-3.6-flash`     | §4                                               |
-| `GEMINI_EMBEDDING_MODEL`                                          | `gemini-embedding-001` | §6.2                                             |
-| `GEMINI_EMBEDDING_DIMENSIONS`                                     | 768                    | must equal the schema constant                   |
-| `GEMINI_CONTEXT_WINDOW_TOKENS`                                    | 1,048,576              | `contextUsedPct` reporting                       |
-| `GEMINI_TIMEOUT_MS`                                               | 60,000                 | per-request timeout on every Gemini call (§10.2) |
-| `CHAT_PROMPT_TOKEN_BUDGET`                                        | 120,000                | history trimming (§4 step 7)                     |
-| `CHAT_HISTORY_WINDOW`                                             | 12                     | verbatim messages in the prompt (§5.2)           |
-| `RAG_TOP_K`                                                       | 4                      | sections per turn                                |
-| `RAG_MIN_SCORE`                                                   | 0.55                   | section similarity floor                         |
-| `RAG_CORRECTIONS_TOP_K`                                           | 3                      | corrections per turn (0 disables)                |
-| `RAG_CORRECTIONS_MIN_SCORE`                                       | 0.65                   | correction similarity floor                      |
-| `MAX_UPLOAD_MB`                                                   | 10                     | upload size limit                                |
-| `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL` | empty (tracing off)    | §1, observability profile                        |
-| `LOG_LEVEL`                                                       | info                   | pino                                             |
+| Variable                                                          | Default              | Used by                                          |
+| ----------------------------------------------------------------- | -------------------- | ------------------------------------------------ |
+| `GEMINI_API_KEY`                                                  | required             | embeddings, chat, summaries                      |
+| `JWT_SECRET`                                                      | required             | HS256 signing key                                |
+| `ACCESS_TOKEN_TTL_MINUTES`                                        | 15                   | §2                                               |
+| `REFRESH_TOKEN_TTL_DAYS`                                          | 7                    | §2                                               |
+| `SEED_USERS`                                                      | `agent1:…,agent2:…`  | start-up seeding                                 |
+| `GEMINI_CHAT_MODEL`                                               | `gemini-3.8-flash`   | §4                                               |
+| `GEMINI_EMBEDDING_MODEL`                                          | `gemini-embedding-2` | §6.2                                             |
+| `GEMINI_EMBEDDING_DIMENSIONS`                                     | 768                  | must equal the schema constant                   |
+| `GEMINI_CONTEXT_WINDOW_TOKENS`                                    | 1,048,576            | `contextUsedPct` reporting                       |
+| `GEMINI_TIMEOUT_MS`                                               | 60,000               | per-request timeout on every Gemini call (§10.2) |
+| `CHAT_PROMPT_TOKEN_BUDGET`                                        | 120,000              | history trimming (§4 step 7)                     |
+| `CHAT_HISTORY_WINDOW`                                             | 12                   | verbatim messages in the prompt (§5.2)           |
+| `RAG_TOP_K`                                                       | 4                    | sections per turn                                |
+| `RAG_MIN_SCORE`                                                   | 0.55                 | section similarity floor                         |
+| `RAG_CORRECTIONS_TOP_K`                                           | 3                    | corrections per turn (0 disables)                |
+| `RAG_CORRECTIONS_MIN_SCORE`                                       | 0.65                 | correction similarity floor                      |
+| `MAX_UPLOAD_MB`                                                   | 10                   | upload size limit                                |
+| `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL` | empty (tracing off)  | §1, observability profile                        |
+| `LOG_LEVEL`                                                       | info                 | pino                                             |
 
 ---
 

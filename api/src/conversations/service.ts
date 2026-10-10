@@ -203,6 +203,8 @@ export function createConversationsService({
       model: m.model ?? undefined,
       promptTokens: m.promptTokens ?? undefined,
       completionTokens: m.completionTokens ?? undefined,
+      thinkingTokens: m.thinkingTokens ?? undefined,
+      totalTokens: m.totalTokens ?? undefined,
       latencyMs: m.latencyMs ?? undefined,
       feedback: feedbackBy.get(m.id),
       createdBy: toUser(users.get(m.createdBy)!),
@@ -568,6 +570,8 @@ export function createConversationsService({
                 model: chatModel.model,
                 promptTokens: g.promptTokens,
                 completionTokens: g.completionTokens,
+                thinkingTokens: g.thinkingTokens,
+                totalTokens: g.totalTokens,
                 finishReason: g.finishReason,
                 estimatedPromptTokens,
                 contextWindowTokens: config.GEMINI_CONTEXT_WINDOW_TOKENS,
@@ -592,6 +596,8 @@ export function createConversationsService({
               raw: result.raw,
               promptTokens: result.promptTokens,
               completionTokens: result.completionTokens,
+              thinkingTokens: result.thinkingTokens,
+              totalTokens: result.totalTokens,
               finishReason: result.finishReason,
               latencyMs,
             });
@@ -606,6 +612,8 @@ export function createConversationsService({
                 coverage: guidance.coverage ?? 'partial',
                 promptTokens: result.promptTokens,
                 completionTokens: result.completionTokens,
+                thinkingTokens: result.thinkingTokens,
+                totalTokens: result.totalTokens,
                 latencyMs,
               })
               .returning();

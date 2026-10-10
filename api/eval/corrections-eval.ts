@@ -79,13 +79,16 @@ const embedder = createGeminiEmbedder({
 const chatModel = createGeminiChatModel({
   apiKey: config.GEMINI_API_KEY,
   model: config.GEMINI_CHAT_MODEL,
+  thinkingLevel: config.GEMINI_THINKING_LEVEL,
   log,
 });
 const judge = new GoogleGenAI({ apiKey: config.GEMINI_API_KEY });
+/** Judge model; pin it (EVAL_JUDGE_MODEL) when comparing chat models so a candidate does not grade itself. */
+const judgeModel = process.env.EVAL_JUDGE_MODEL ?? config.GEMINI_CHAT_MODEL;
 
 async function judgeAnswer(customer: string, target: string, candidate: string) {
   const res = await judge.models.generateContent({
-    model: config.GEMINI_CHAT_MODEL,
+    model: judgeModel,
     contents: [
       {
         role: 'user',
@@ -258,7 +261,7 @@ const avg = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;
 const md = [
   '# Correction-quality evaluation results',
   '',
-  `Generated ${new Date().toISOString()} with chat model \`${config.GEMINI_CHAT_MODEL}\`, embeddings \`${config.GEMINI_EMBEDDING_MODEL}\` (${config.GEMINI_EMBEDDING_DIMENSIONS}d), RAG_CORRECTIONS_MIN_SCORE = ${config.RAG_CORRECTIONS_MIN_SCORE}, ${repeats} sample(s) per arm, judge = same chat model at temperature 0. Scores are judge means over the samples (individual samples in brackets).`,
+  `Generated ${new Date().toISOString()} with chat model \`${config.GEMINI_CHAT_MODEL}\`, embeddings \`${config.GEMINI_EMBEDDING_MODEL}\` (${config.GEMINI_EMBEDDING_DIMENSIONS}d), RAG_CORRECTIONS_MIN_SCORE = ${config.RAG_CORRECTIONS_MIN_SCORE}, ${repeats} sample(s) per arm, thinking \`${config.GEMINI_THINKING_LEVEL}\`, judge = \`${judgeModel}\` at temperature 0. Scores are judge means over the samples (individual samples in brackets).`,
   '',
   '| Case | Corrections retrieved | Baseline score | With correction |',
   '|---|---|---|---|',

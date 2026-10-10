@@ -16,6 +16,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
+    "db:reembed": "tsx src/db/reembed.ts",
     "eval:retrieval": "tsx eval/retrieval-eval.ts",
     "eval:corrections": "tsx eval/corrections-eval.ts"
   },
@@ -24,7 +25,7 @@
     "@app/openapi": "workspace:*",
     "@fastify/swagger": "^9.5.1",
     "@fastify/swagger-ui": "^5.2.3",
-    "@google/genai": "^1.12.0",
+    "@google/genai": "^2.28.0",
     "@langfuse/client": "^5.11.1",
     "@langfuse/otel": "^5.11.1",
     "@langfuse/tracing": "^5.11.1",

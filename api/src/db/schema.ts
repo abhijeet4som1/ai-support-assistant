@@ -236,7 +236,11 @@ export const messages = pgTable(
     guidelineVersionId: uuid('guideline_version_id'),
     model: text('model'),
     promptTokens: integer('prompt_tokens'),
+    /** Visible answer tokens; thinking tokens are reported separately by the provider. */
     completionTokens: integer('completion_tokens'),
+    thinkingTokens: integer('thinking_tokens'),
+    /** Provider-reported total for the call (prompt + thinking + answer). */
+    totalTokens: integer('total_tokens'),
     latencyMs: integer('latency_ms'),
     /** Observability trace id (Langfuse) of the turn that produced this answer; feedback scores attach to it. */
     traceId: text('trace_id'),

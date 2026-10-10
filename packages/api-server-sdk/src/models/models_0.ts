@@ -955,8 +955,30 @@ export interface Message {
   correctionsUsed?: UsedCorrection[] | undefined;
   guidelineVersionId?: string | undefined;
   model?: string | undefined;
+  /**
+   * Tokens in the prompt (system instruction, history, retrieved context).
+   * @public
+   */
   promptTokens?: number | undefined;
+
+  /**
+   * Visible answer tokens, excluding the model's reasoning.
+   * @public
+   */
   completionTokens?: number | undefined;
+
+  /**
+   * Reasoning ("thinking") tokens; billed as output but not part of the answer.
+   * @public
+   */
+  thinkingTokens?: number | undefined;
+
+  /**
+   * Total tokens billed for the call as reported by the provider (prompt + thinking + answer).
+   * @public
+   */
+  totalTokens?: number | undefined;
+
   latencyMs?: number | undefined;
   feedback?: FeedbackSummary[] | undefined;
   createdBy: User | undefined;
@@ -982,6 +1004,8 @@ export namespace Message {
     model?: __MultiConstraintValidator<string>,
     promptTokens?: __MultiConstraintValidator<number>,
     completionTokens?: __MultiConstraintValidator<number>,
+    thinkingTokens?: __MultiConstraintValidator<number>,
+    totalTokens?: __MultiConstraintValidator<number>,
     latencyMs?: __MultiConstraintValidator<number>,
     feedback?: __MultiConstraintValidator<Iterable<FeedbackSummary>>,
     createdBy?: __MultiConstraintValidator<User>,
@@ -1091,6 +1115,14 @@ export namespace Message {
             memberValidators["completionTokens"] = new __NoOpValidator();
             break;
           }
+          case "thinkingTokens": {
+            memberValidators["thinkingTokens"] = new __NoOpValidator();
+            break;
+          }
+          case "totalTokens": {
+            memberValidators["totalTokens"] = new __NoOpValidator();
+            break;
+          }
           case "latencyMs": {
             memberValidators["latencyMs"] = new __NoOpValidator();
             break;
@@ -1138,6 +1170,8 @@ export namespace Message {
       ...getMemberValidator("model").validate(obj.model, `${path}/model`),
       ...getMemberValidator("promptTokens").validate(obj.promptTokens, `${path}/promptTokens`),
       ...getMemberValidator("completionTokens").validate(obj.completionTokens, `${path}/completionTokens`),
+      ...getMemberValidator("thinkingTokens").validate(obj.thinkingTokens, `${path}/thinkingTokens`),
+      ...getMemberValidator("totalTokens").validate(obj.totalTokens, `${path}/totalTokens`),
       ...getMemberValidator("latencyMs").validate(obj.latencyMs, `${path}/latencyMs`),
       ...getMemberValidator("feedback").validate(obj.feedback, `${path}/feedback`),
       ...getMemberValidator("createdBy").validate(obj.createdBy, `${path}/createdBy`),

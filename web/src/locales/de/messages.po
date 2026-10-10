@@ -41,7 +41,7 @@ msgid "{0} other rating(s): {1}"
 msgstr "{0} weitere Bewertung(en): {1}"
 
 #. placeholder {0}: message.completionTokens
-#: src/components/history/why-panel.tsx:67
+#: src/components/history/why-panel.tsx:72
 msgid "{0} output tokens"
 msgstr "{0} Ausgabe-Tokens"
 
@@ -50,10 +50,20 @@ msgstr "{0} Ausgabe-Tokens"
 msgid "{0} prompt tokens"
 msgstr "{0} Prompt-Tokens"
 
+#. placeholder {0}: message.thinkingTokens
+#: src/components/history/why-panel.tsx:67
+msgid "{0} thinking tokens"
+msgstr "{0} Denk-Tokens"
+
 #. placeholder {0}: c.tokenCount
 #: src/components/guidelines/guideline-viewer.tsx:36
 msgid "{0} tokens"
 msgstr "{0} Tokens"
+
+#. placeholder {0}: message.totalTokens
+#: src/components/history/why-panel.tsx:77
+msgid "{0} total tokens"
+msgstr "{0} Tokens gesamt"
 
 #. placeholder {0}: conflict.uploadedBy
 #. placeholder {1}: formatDateTime(conflict.uploadedAt)
@@ -345,7 +355,7 @@ msgid "Guidelines uploaded. Processing has started."
 msgstr "Richtlinien hochgeladen. Die Verarbeitung hat begonnen."
 
 #. placeholder {0}: message.guidelineVersionId.slice(0, 8)
-#: src/components/history/why-panel.tsx:75
+#: src/components/history/why-panel.tsx:85
 msgid "guidelines v. {0}"
 msgstr "Richtlinien-Version {0}"
 

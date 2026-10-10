@@ -591,10 +591,26 @@ export interface components {
             correctionsUsed?: components["schemas"]["UsedCorrection"][];
             guidelineVersionId?: string;
             model?: string;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Tokens in the prompt (system instruction, history, retrieved context).
+             */
             promptTokens?: number;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Visible answer tokens, excluding the model's reasoning.
+             */
             completionTokens?: number;
+            /**
+             * Format: int32
+             * @description Reasoning ("thinking") tokens; billed as output but not part of the answer.
+             */
+            thinkingTokens?: number;
+            /**
+             * Format: int32
+             * @description Total tokens billed for the call as reported by the provider (prompt + thinking + answer).
+             */
+            totalTokens?: number;
             /** Format: int32 */
             latencyMs?: number;
             feedback?: components["schemas"]["FeedbackSummary"][];

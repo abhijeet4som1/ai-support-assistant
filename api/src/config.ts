@@ -19,8 +19,14 @@ const schema = z.object({
   SEED_USERS: z.string().default('agent1:agent1pass,agent2:agent2pass'),
 
   GEMINI_API_KEY: z.string().min(1, 'GEMINI_API_KEY is required'),
-  GEMINI_CHAT_MODEL: z.string().default('gemini-3.6-flash'),
-  GEMINI_EMBEDDING_MODEL: z.string().default('gemini-embedding-001'),
+  GEMINI_CHAT_MODEL: z.string().default('gemini-3.8-flash'),
+  /**
+   * Thinking level of the chat model. Thinking tokens are billed as output and count against
+   * maxOutputTokens; "medium" matched the previous model on quality at similar latency, "high"
+   * cost ~8x and took a minute per answer (docs/evaluation-report.md §7.1).
+   */
+  GEMINI_THINKING_LEVEL: z.enum(['minimal', 'low', 'medium', 'high']).default('medium'),
+  GEMINI_EMBEDDING_MODEL: z.string().default('gemini-embedding-2'),
   GEMINI_EMBEDDING_DIMENSIONS: z.coerce.number().int().positive().default(768),
   /** Context window of the chat model, used to report how much of it each call consumes. */
   GEMINI_CONTEXT_WINDOW_TOKENS: z.coerce.number().int().positive().default(1_048_576),

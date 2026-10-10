@@ -1,6 +1,6 @@
 # High-Level Design: AI Support Assistant
 
-Version 1.0, 2026-09-13. Companion documents: `docs/lld.md` (component-level design),
+Version 1.1, 2026-10-10 (1.0 on 2026-09-13). Companion documents: `docs/lld.md` (component-level design),
 `docs/evaluation-report.md` (measurements behind the tuning decisions).
 
 ## 1. Problem statement
@@ -66,7 +66,7 @@ Six moving parts, one external dependency:
 | **API**        | Contract-first HTTP API generated from a Smithy model: auth, companies, guideline versions, conversations (the RAG turn), feedback. Stateless; scales horizontally.     |
 | **Worker**     | Same image as the API, different entry point. Consumes ingestion jobs: parse file, chunk by heading, embed, activate the version. Resumable and idempotent.             |
 | **PostgreSQL** | System of record for everything: users and sessions, companies, guideline versions and chunks with their vectors, conversations, messages, feedback, and the job queue. |
-| **Gemini**     | `gemini-3.6-flash` for structured answers and history summaries, `gemini-embedding-001` (768 d) for chunk and query vectors.                                            |
+| **Gemini**     | `gemini-3.8-flash` (medium thinking) for structured answers and history summaries, `gemini-embedding-2` (768 d) for chunk and query vectors.                            |
 | **Langfuse**   | Self-hosted, off by default. One trace per chat turn and per ingestion, agent feedback attached as scores.                                                              |
 
 ### 2.1 The four flows
@@ -165,12 +165,17 @@ they need about 2 GB of RAM and are not required to use the product.
 **Gemini as the single provider.** The brief asked for Gemini; the provider is isolated behind
 two interfaces (`ChatModel`, `Embedder`) with fake implementations for tests, so a second provider
 is an adapter, not a refactor. `gemini-3.6-flash` was adopted when `gemini-2.5-flash` was withdrawn
-for new users; the Interactions API was evaluated and not adopted because the request/response
+for new users, and replaced by `gemini-3.8-flash` on 2026-10-10 (the newest Flash on the key; the
+thinking level is pinned to `medium` by `GEMINI_THINKING_LEVEL`, the setting the evaluation found
+to match 3.6 on quality at similar latency, see `docs/evaluation-report.md` §7.1); the Interactions API was evaluated and not adopted because the request/response
 `generateContent` call with a response schema fits a stateless API better.
 
-**Embeddings at 768 dimensions (measured).** `gemini-embedding-001` supports 768, 1536 and 3072.
+**Embeddings at 768 dimensions (measured).** `gemini-embedding-2` (and `gemini-embedding-001`
+before it) supports 768, 1536 and 3072.
 On the evaluation set 768 was best or tied on every metric (top-1 82.5 %, expected section in the
-prompt 100 %); 3072 was strictly worse and would need pgvector `halfvec`. Cost is per input token,
+prompt 100 %); 3072 was strictly worse and would need pgvector `halfvec`. The 2026-10-10 re-run
+on `gemini-embedding-2` agrees: 1536 matches 768 on top-1 (84.8 %) and recall (98.7 % with
+vectors, 100 % with the rescue). Cost is per input token,
 not per dimension, so larger vectors only cost storage. The column is `vector(768)` and both
 services refuse to start if the configured dimension differs, because a mismatch would corrupt
 retrieval silently.
@@ -222,7 +227,7 @@ formatting is lost at text extraction) are treated as body text and windowed. Tw
 are in place: the extracted text and the resulting chunk titles are shown in the product right
 after ingestion, so whoever uploaded the file sees how it was split, and the heading patterns are
 three regular expressions with unit tests, so adding a house style is a small, testable change.
-The known gaps are listed in §7.
+The known gaps are listed in §8.
 
 **Retrieval: top 4 sections at a 0.55 similarity floor (measured).** Four sections cover
 multi-topic tickets (a late delivery that is also damaged) while keeping the prompt small. The
@@ -262,6 +267,8 @@ chosen default for typical thread length, not a measured optimum.
 setting of 2048 truncated a quarter of answers mid-JSON because a thinking model's reasoning
 counts against the same budget. 8192 leaves room to reason and emit the full object while still
 capping runaway generations; the finish reason is checked and surfaced as a specific error.
+The thinking level is pinned to `medium`: at `high` the same model spent up to 31k tokens
+reasoning on one answer, which no fixed budget survives.
 
 **Prompt-injection defences.** Customer text is untrusted input: it is wrapped in delimiters with
 spoofed closing tags stripped, the system prompt states that instructions inside it are never
@@ -286,8 +293,9 @@ authority than the guidelines. The evaluation showed one more step was needed: w
 matches but the customer's paraphrase misses the guideline section, the correction alone cannot
 ground the answer, so the sections retrieved by the correction's original question are pulled in
 as well (correction-anchored retrieval). With that in place the judged answer quality on the
-correction set rose from 3.17 to 4.42 out of 5 (3.50 to 4.25 in the latest run, after the
-acceptance-test prompt rules raised every baseline; evaluation report §8). Corrections are deactivated automatically when
+correction set rose from 3.17 to 4.42 out of 5 (3.67 to 4.33 in the latest run on
+`gemini-3.8-flash`, after the acceptance-test prompt rules raised every baseline; evaluation
+report §8). Corrections are deactivated automatically when
 the guideline version they were written against is replaced, and agents can toggle them.
 
 ### 3.5 Web application
@@ -324,7 +332,7 @@ conversation list is always scoped to the caller, and reading, continuing or rat
 agent's conversation answers 404 so its existence is not revealed. Companies, guideline versions
 and corrections stay shared, because a correction is knowledge about the guidelines rather than
 about a thread, and an agent's thumbs-down should improve every agent's later answers. Tenant
-scoping and roles (§7) would layer on top of the same check.
+scoping and roles (§8) would layer on top of the same check.
 
 ### 3.7 Observability
 
@@ -341,11 +349,11 @@ The project doubles as a proof of concept for the approach. What was validated, 
 
 | Question                                                                      | How it was tested                                                                                                                                                  | Outcome                                                                                                                                                                                                                        |
 | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Does heading-aware chunking plus 768-d embeddings retrieve the right section? | 79 labelled tickets (40 original, 22 from the acceptance test plans, 10 vague, 7 two-topic) and 15 out-of-scope probes across both seed companies, real embeddings | Expected section in the prompt 98.7 % of the time with vectors alone, 100 % with the keyword rescue; top-1 83.5 %                                                                                                              |
+| Does heading-aware chunking plus 768-d embeddings retrieve the right section? | 79 labelled tickets (40 original, 22 from the acceptance test plans, 10 vague, 7 two-topic) and 15 out-of-scope probes across both seed companies, real embeddings | Expected section in the prompt 98.7 % of the time with vectors alone, 100 % with the keyword rescue; top-1 84.8 % on `gemini-embedding-2` (83.5 % on 001)                                                                      |
 | Do bigger vectors help?                                                       | Same set at 1536 and 3072                                                                                                                                          | No; 768 kept                                                                                                                                                                                                                   |
 | Can a similarity threshold reject out-of-scope questions?                     | Pass-gate and rejection rates at seven thresholds                                                                                                                  | No clean separation; 0.55 kept as a floor, refusal handled by prompt rules and the gate                                                                                                                                        |
 | Would hybrid full-text plus vector retrieval be better?                       | BM25 + reciprocal-rank fusion simulated in the harness                                                                                                             | Lower top-1, same top-4; not adopted. A keyword _rescue_ (append, never reorder) was added instead after user testing found a vague message whose section ranked 9th of 10: recall 98.7 → 100 % on 79 queries, top-1 unchanged |
-| Do stored corrections improve later answers?                                  | Four cases, three samples per arm, model-as-judge against the corrected reply                                                                                      | 3.17 to 4.42 out of 5 after correction-anchored retrieval; 3.50 to 4.25 in the latest run, see report §8                                                                                                                       |
+| Do stored corrections improve later answers?                                  | Four cases, three samples per arm, model-as-judge against the corrected reply                                                                                      | 3.17 to 4.42 out of 5 after correction-anchored retrieval; 3.67 to 4.33 in the latest run on `gemini-3.8-flash` (3.50 to 4.25 on 3.6), see report §8                                                                           |
 | Does the pipeline hold up end to end?                                         | 103 API integration tests on in-process Postgres with pgvector, 53 web tests, clean Docker run with a real key                                                     | Passes; two production bugs found by the harnesses and fixed before the demo                                                                                                                                                   |
 
 Full method, tables and limits: `docs/evaluation-report.md` (or the HTML version alongside it).
@@ -354,7 +362,63 @@ What the POC deliberately does not prove: behaviour on large guideline corpora (
 pages), multi-tenant isolation, or throughput under concurrent agents. The harnesses are built
 to be re-run against a customer's own documents before those questions matter.
 
-## 5. Security and privacy
+## 5. Cost model: one month
+
+**Question.** What does one month cost for 500 companies and 1,000 agents, each agent handling
+500 customer messages a day, with every message answered by the assistant?
+
+**Volume.** 1,000 agents × 500 messages × 30 days = **15,000,000 answers a month** (500,000 a
+day, about 1,000 a day per company).
+
+**What one answer costs.** Token counts are the ones the api stores for every answer
+(`gemini-3.8-flash`, thinking `medium`) and the evaluation report §7.1; prices are the Gemini
+API paid tier on 2026-10-10: `gemini-3.8-flash` $0.75 per 1M input and $3.75 per 1M output
+tokens, thinking billed as output; `gemini-embedding-2` $0.20 per 1M tokens.
+
+| Component                              | Tokens | Price per 1M | Cost          |
+| -------------------------------------- | ------ | ------------ | ------------- |
+| Prompt (system + history + 4 sections) | ~1,500 | $0.75        | $0.0011       |
+| Thinking (reasoning, billed as output) | ~2,200 | $3.75        | $0.0083       |
+| Visible answer (JSON guidance)         | ~300   | $3.75        | $0.0011       |
+| Query embeddings (2 calls)             | ~100   | $0.20        | $0.00002      |
+| **One answer**                         |        |              | **≈ $0.0105** |
+
+**One month.**
+
+| Line item                        | Basis                                                                                            | Per month              |
+| -------------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------- |
+| Chat answers                     | 15,000,000 × $0.0105                                                                             | $157,500               |
+| History summaries                | one `summarize` call per 12 turns, ~3,000 in / ~500 out, ≤ 5 % of answers                        | ≤ $8,000               |
+| Query embeddings                 | 15,000,000 × 100 tokens × $0.20 / 1M                                                             | $300                   |
+| Guideline ingestion, corrections | 500 documents of ~20k tokens, one embedding per thumbs-down                                      | < $50                  |
+| **Gemini, 2026 prices**          |                                                                                                  | **≈ $166,000**         |
+| Infrastructure                   | 3–4 api replicas, managed Postgres (~30 GB of messages a month), load balancer, sampled Langfuse | ≈ $1,500–3,000         |
+| **Total**                        |                                                                                                  | **≈ $170,000 a month** |
+
+That is about **$170 per agent per month**, or **1.1 cents per customer message**. From
+2027-01-01 both Flash prices double, so the same month costs **≈ $335,000**.
+
+**Where the money goes.** About 90 % of the bill is output tokens, and three quarters of those are
+thinking tokens the agent never sees. The prompt, the part retrieval and history tuning can
+shrink, is about 10 %. The levers, in order of size:
+
+| Lever                                                   | Effect on the month        | Status                                                                      |
+| ------------------------------------------------------- | -------------------------- | --------------------------------------------------------------------------- |
+| Thinking `medium` → `low` or `minimal`                  | up to −40 % (≈ $65,000)    | `GEMINI_THINKING_LEVEL` exists; quality at lower levels is **not measured** |
+| `gemini-3.5-flash-lite` for covered, single-topic turns | about −35 % on those turns | Not measured; run `api/eval` before switching                               |
+| Prompt trimming (fewer sections, shorter window)        | a few % at most            | Low leverage                                                                |
+| Thinking `high`                                         | ≈ 8× (≈ $1.3 M)            | Ruled out for live turns (report §7.1)                                      |
+
+**Also needed at this volume.** A paid Gemini tier that allows ~1,500 chat requests and ~6M tokens
+a minute at a 3× peak (~25 answers a second); a retention policy for ~1 GB of messages a day and
+~5 GB a day of traces if every turn is traced.
+
+**Limits.** Token counts come from two short seed documents and short threads; real guidelines
+of 20 to 50 sections and long threads push the prompt to 3,000 to 4,000 tokens and add about
+20 %. The scenario assumes every message goes through the assistant at a flat rate, and the
+prices are list prices with no committed-use discount.
+
+## 6. Security and privacy
 
 - All API routes except health, login and refresh require a bearer token; the check runs before
   the request body is parsed.
@@ -366,7 +430,7 @@ to be re-run against a customer's own documents before those questions matter.
   go to Gemini.
 - Request ids from nginx tie logs, traces and error responses together without exposing internals.
 
-## 6. Quality and delivery
+## 7. Quality and delivery
 
 - Tests run without Docker, a database or a Gemini key: PGlite with pgvector in-process, fake
   embedder and chat model, in-memory queue. 103 API tests cover auth, ingestion states, chat
@@ -377,7 +441,7 @@ to be re-run against a customer's own documents before those questions matter.
 - The API contract is versioned by the Smithy model; the generated SDK, OpenAPI and web types are
   committed and regenerated with one command.
 
-## 7. Known limitations and the path to production
+## 8. Known limitations and the path to production
 
 | Today (POC)                                          | Production step                                                                                  |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -389,10 +453,10 @@ to be re-run against a customer's own documents before those questions matter.
 | Free-tier Gemini rate limits                         | Paid quota; retries and progress reporting already handle throttling                             |
 | Threshold and window defaults tuned on two documents | Re-run the harnesses on the customer's corpus; all values are environment variables              |
 
-## 8. References
+## 9. References
 
 - `docs/lld.md`: component-level design, data model, sequence diagrams, prompt layout.
-- `docs/evaluation-report.md`: measurements behind §3.3 and §3.4.
+- `docs/evaluation-report.md`: measurements behind §3.3, §3.4 and §5.
 - `README.md`: how to run, test each flow, configuration, troubleshooting.
 - Smithy: https://smithy.io/2.0/ · pgvector: https://github.com/pgvector/pgvector · pg-boss:
   https://github.com/timgit/pg-boss · Langfuse: https://langfuse.com/self-hosting

@@ -113,6 +113,8 @@ describe('conversations + RAG', () => {
       model: 'fake-chat',
       promptTokens: 100,
       completionTokens: 50,
+      thinkingTokens: 20,
+      totalTokens: 170,
       droppedHistoryTurns: 0,
     });
     expect(trace.generation?.contextUsedPct).toBeGreaterThan(0);

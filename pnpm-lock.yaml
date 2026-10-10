@@ -36,8 +36,8 @@ importers:
         specifier: ^5.2.3
         version: 5.2.6
       '@google/genai':
-        specifier: ^1.12.0
-        version: 1.52.0
+        specifier: ^2.28.0
+        version: 2.28.0
       '@langfuse/client':
         specifier: ^5.11.1
         version: 5.11.1(@opentelemetry/api@1.9.1)
@@ -1035,8 +1035,8 @@ packages:
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
 
-  '@google/genai@1.52.0':
-    resolution: {integrity: sha512-gwSvbpiN/17O9TbsqSsE/OzZcpv5Fo4RQjdngGgogtuB9RsyJ8ZHhX5KjHj1bp5N9snN2eK8LDGXSaWW2hof8Q==}
+  '@google/genai@2.28.0':
+    resolution: {integrity: sha512-hyNAJj+ywu3L46qlZod6KO/JvcT3QONz6VCiPevC/FWOjAD+LQb7DMLUoV8vzoLpt61Q0ruQX99iqbxEjPJWmw==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
       '@modelcontextprotocol/sdk': ^1.25.2
@@ -6142,7 +6142,7 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
-  '@google/genai@1.52.0':
+  '@google/genai@2.28.0':
     dependencies:
       google-auth-library: 10.9.1
       p-retry: 4.6.2

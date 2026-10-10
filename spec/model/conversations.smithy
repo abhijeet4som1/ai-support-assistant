@@ -126,8 +126,14 @@ structure Message {
     correctionsUsed: UsedCorrectionList
     guidelineVersionId: Id
     model: String
+    /// Tokens in the prompt (system instruction, history, retrieved context).
     promptTokens: Integer
+    /// Visible answer tokens, excluding the model's reasoning.
     completionTokens: Integer
+    /// Reasoning ("thinking") tokens; billed as output but not part of the answer.
+    thinkingTokens: Integer
+    /// Total tokens billed for the call as reported by the provider (prompt + thinking + answer).
+    totalTokens: Integer
     latencyMs: Integer
     feedback: FeedbackSummaryList
     @required

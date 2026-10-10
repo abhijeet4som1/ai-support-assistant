@@ -37,6 +37,8 @@ export interface GenerationRecord {
   error?: string;
   promptTokens?: number;
   completionTokens?: number;
+  thinkingTokens?: number;
+  totalTokens?: number;
   finishReason?: string;
   estimatedPromptTokens: number;
   contextWindowTokens: number;
@@ -245,9 +247,19 @@ export function createLangfuseTracer(opts: {
                       ...g.turns.map((t) => ({ role: t.role, content: t.text })),
                     ],
                     output: g.raw,
+                    // Thinking tokens are billed as output; `total` is the provider's figure.
                     usageDetails:
                       g.promptTokens !== undefined || g.completionTokens !== undefined
-                        ? { input: g.promptTokens ?? 0, output: g.completionTokens ?? 0 }
+                        ? {
+                            input: g.promptTokens ?? 0,
+                            output: g.completionTokens ?? 0,
+                            reasoning: g.thinkingTokens ?? 0,
+                            total:
+                              g.totalTokens ??
+                              (g.promptTokens ?? 0) +
+                                (g.completionTokens ?? 0) +
+                                (g.thinkingTokens ?? 0),
+                          }
                         : undefined,
                     metadata: {
                       finishReason: g.finishReason,

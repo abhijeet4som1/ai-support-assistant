@@ -58,7 +58,7 @@ const thresholds = (args.get('thresholds') ?? '0.5,0.55,0.58,0.6,0.62,0.65,0.7')
 loadDotEnv();
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) throw new Error('GEMINI_API_KEY is required (set it in .env or the environment)');
-const model = process.env.GEMINI_EMBEDDING_MODEL ?? 'gemini-embedding-001';
+const model = process.env.GEMINI_EMBEDDING_MODEL ?? 'gemini-embedding-2';
 const log = pino({ level: 'warn' });
 
 const here = fileURLToPath(new URL('.', import.meta.url));

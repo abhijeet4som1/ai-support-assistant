@@ -2750,10 +2750,22 @@
           },
           "promptTokens": {
             "type": "integer",
+            "description": "Tokens in the prompt (system instruction, history, retrieved context).",
             "format": "int32"
           },
           "completionTokens": {
             "type": "integer",
+            "description": "Visible answer tokens, excluding the model's reasoning.",
+            "format": "int32"
+          },
+          "thinkingTokens": {
+            "type": "integer",
+            "description": "Reasoning (\"thinking\") tokens; billed as output but not part of the answer.",
+            "format": "int32"
+          },
+          "totalTokens": {
+            "type": "integer",
+            "description": "Total tokens billed for the call as reported by the provider (prompt + thinking + answer).",
             "format": "int32"
           },
           "latencyMs": {

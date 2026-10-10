@@ -2304,6 +2304,8 @@ const se_Message = (
     'retrieval': _ => se_RetrievedChunkList(_, context),
     'role': [],
     'status': [],
+    'thinkingTokens': [],
+    'totalTokens': [],
   });
 }
 
